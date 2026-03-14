@@ -132,3 +132,7 @@ ALLOWED_HOSTS = ['*']
 # Add this at the bottom of settings.py
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://web-production-5f723.up.railway.app'
+]
