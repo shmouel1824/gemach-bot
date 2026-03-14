@@ -1,0 +1,1 @@
+web: gunicorn gemach.wsgi --log-file -
