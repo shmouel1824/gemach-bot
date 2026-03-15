@@ -1,9 +1,15 @@
 from django.db import models
 
 class Medicine(models.Model):
-    name         = models.CharField(max_length=200)
-    name_hebrew  = models.CharField(max_length=200, blank=True, null=True)
-    quantity     = models.PositiveIntegerField(default=0)
+    # Existing fields
+    name              = models.CharField(max_length=200)
+    name_hebrew       = models.CharField(max_length=200, blank=True, null=True)
+    quantity          = models.PositiveIntegerField(default=0)
+
+    # New fields
+    expiry_date       = models.DateField(blank=True, null=True)
+    min_age           = models.PositiveIntegerField(blank=True, null=True)
+    suitable_pregnant = models.BooleanField(default=False)
 
     def __str__(self):
         if self.name_hebrew:
@@ -12,6 +18,12 @@ class Medicine(models.Model):
 
     def is_available(self):
         return self.quantity > 0
+
+    def is_expired(self):
+        from django.utils import timezone
+        if self.expiry_date:
+            return self.expiry_date < timezone.now().date()
+        return False
 
 
 class Visitor(models.Model):

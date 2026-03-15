@@ -210,37 +210,75 @@ def whatsapp_bot(request):
         if medicine and not is_fuzzy:
             heb = f" ({medicine.name_hebrew})" if medicine.name_hebrew else ""
 
-            if medicine.quantity == 0:
-                # Found in DB but out of stock
+            # ── Build details string
+            details = []
+
+            # Expiry date
+            if medicine.expiry_date:
+                from django.utils import timezone
+                if medicine.is_expired():
+                    details.append(
+                        f"⚠️ פג תוקף! | ⚠️ EXPIRED: "
+                        f"{medicine.expiry_date.strftime('%d/%m/%Y')}"
+                    )
+                else:
+                    details.append(
+                        f"📅 תוקף עד | Expiry: "
+                        f"{medicine.expiry_date.strftime('%d/%m/%Y')}"
+                    )
+
+            # Minimum age
+            if medicine.min_age:
+                details.append(
+                    f"👶 מגיל | Min age: {medicine.min_age}+"
+                )
+
+            # Suitable for pregnant
+            if medicine.suitable_pregnant:
+                details.append(
+                    f"🤰 מתאים להריון | Safe for pregnant: ✅"
+                )
+            else:
+                details.append(
+                    f"🤰 מתאים להריון | Safe for pregnant: ❌"
+                )
+
+            details_text = "\n".join(details)
+
+            if medicine.is_expired():
+                msg.body(
+                    f"⚠️ *{medicine.name}{heb}*\n\n"
+                    f"התרופה פגה! אנא פנה אלינו ישירות.\n"
+                    f"This medicine is EXPIRED. Please contact us.\n\n"
+                    f"{details_text}"
+                )
+
+            elif medicine.quantity == 0:
                 msg.body(
                     f"😔 *{medicine.name}{heb}*\n\n"
                     f"התרופה נמצאת במאגר אך אזלה מהמלאי.\n"
-                    f"This medicine is in our list but currently *out of stock*.\n\n"
-                    f"אנא צור/י קשר ישירות לבירור. 🙏\n"
-                    f"Please contact us directly for more info. 🙏"
+                    f"Out of stock. Please contact us directly. 🙏\n\n"
+                    f"{details_text}"
                 )
+
             elif medicine.quantity <= 2:
-                # Low stock warning
                 msg.body(
-                    f"⚠️ *{medicine.name}{heb}* זמינה — אך כמות נמוכה!\n"
-                    f"⚠️ *{medicine.name}{heb}* is available — but low stock!\n\n"
-                    f"כמות נותרת | Remaining: *{medicine.quantity} units*\n\n"
-                    f"אנא צור/י קשר בהקדם לתיאום איסוף. 🙏\n"
-                    f"Please contact us soon to arrange pickup. 🙏"
+                    f"⚠️ *{medicine.name}{heb}* — כמות נמוכה!\n"
+                    f"⚠️ *{medicine.name}{heb}* — Low stock!\n\n"
+                    f"כמות | Quantity: *{medicine.quantity} units*\n\n"
+                    f"{details_text}\n\n"
+                    f"אנא צור/י קשר בהקדם. Contact us soon! 🙏"
                 )
+                notify_admin_low_stock(medicine)
+
             else:
-                # Fully available
                 msg.body(
-                    f"✅ *{medicine.name}{heb}* זמינה בגמ\"ח! 🙏\n"
-                    f"✅ *{medicine.name}{heb}* is available! 🙏\n\n"
-                    f"כמות נותרת | Remaining: *{medicine.quantity} units*\n\n"
+                    f"✅ *{medicine.name}{heb}* זמינה! | Available! 🙏\n\n"
+                    f"כמות | Quantity: *{medicine.quantity} units*\n\n"
+                    f"{details_text}\n\n"
                     f"אנא צור/י קשר לתיאום איסוף.\n"
                     f"Please contact us to arrange pickup."
                 )
-
-            # Alert admin if stock is low or zero
-            if medicine.quantity <= 2:
-                notify_admin_low_stock(medicine)
 
         elif medicine and is_fuzzy:
             heb = f" ({medicine.name_hebrew})" if medicine.name_hebrew else ""
@@ -253,9 +291,9 @@ def whatsapp_bot(request):
                 f"Reply with the correct name to check again."
             )
             notify_admin(
-                medicine_searched = incoming_msg,
-                requester_phone   = sender_phone,
-                suggestion        = medicine.name
+                medicine_searched=incoming_msg,
+                requester_phone=sender_phone,
+                suggestion=medicine.name
             )
 
         else:
@@ -265,9 +303,9 @@ def whatsapp_bot(request):
                 + get_medicine_list()
             )
             notify_admin(
-                medicine_searched = incoming_msg,
-                requester_phone   = sender_phone,
-                suggestion        = None
+                medicine_searched=incoming_msg,
+                requester_phone=sender_phone,
+                suggestion=None
             )
 
         return HttpResponse(str(response), content_type='text/xml')
