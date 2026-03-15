@@ -271,3 +271,70 @@ def whatsapp_bot(request):
             )
 
         return HttpResponse(str(response), content_type='text/xml')
+
+@csrf_exempt
+def sms_bot(request):
+    if request.method == 'POST':
+
+        incoming_msg = request.POST.get('Body', '').strip()
+        sender_phone = request.POST.get('From', '')
+
+        response = MessagingResponse()
+
+        # ── LIST command
+        if incoming_msg.upper() in ['LIST', 'רשימה']:
+            response.message(get_medicine_list())
+            return HttpResponse(str(response), content_type='text/xml')
+
+        # ── Search
+        medicine, matched_name, is_fuzzy, score = search_medicine(incoming_msg)
+
+        if medicine and not is_fuzzy:
+            heb = f" ({medicine.name_hebrew})" if medicine.name_hebrew else ""
+            if medicine.quantity == 0:
+                response.message(
+                    f"מצטערים, {medicine.name}{heb} נמצאת במאגר אך אזלה מהמלאי.\n"
+                    f"Sorry, {medicine.name}{heb} is out of stock.\n"
+                    f"צרו קשר ישירות לבירור. Please contact us directly."
+                )
+            elif medicine.quantity <= 2:
+                response.message(
+                    f"זהירות! {medicine.name}{heb} זמינה אך כמות נמוכה ({medicine.quantity} יחידות).\n"
+                    f"Warning! {medicine.name}{heb} available but low stock ({medicine.quantity} units).\n"
+                    f"צרו קשר בהקדם. Contact us soon."
+                )
+                notify_admin_low_stock(medicine)
+            else:
+                response.message(
+                    f"כן! {medicine.name}{heb} זמינה בגמ\"ח ({medicine.quantity} יחידות).\n"
+                    f"Yes! {medicine.name}{heb} is available ({medicine.quantity} units).\n"
+                    f"צרו קשר לתיאום. Contact us to arrange pickup."
+                )
+
+        elif medicine and is_fuzzy:
+            heb = f" ({medicine.name_hebrew})" if medicine.name_hebrew else ""
+            response.message(
+                f"לא מצאתי {incoming_msg}.\n"
+                f"האם התכוונת ל: {medicine.name}{heb}?\n"
+                f"Did you mean: {medicine.name}{heb}?\n"
+                f"שלח/י את השם המדויק. Reply with the correct name."
+            )
+            notify_admin(
+                medicine_searched=incoming_msg,
+                requester_phone=sender_phone,
+                suggestion=medicine.name
+            )
+
+        else:
+            response.message(
+                f"לא נמצא {incoming_msg} במאגר שלנו.\n"
+                f"{incoming_msg} not found in our Gemach.\n\n"
+                + get_medicine_list()
+            )
+            notify_admin(
+                medicine_searched=incoming_msg,
+                requester_phone=sender_phone,
+                suggestion=None
+            )
+
+        return HttpResponse(str(response), content_type='text/xml')
