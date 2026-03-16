@@ -328,43 +328,73 @@ def whatsapp_bot(request):
         
         # ── REPORT command (admin only)
         if incoming_msg.upper() in ['REPORT', 'דוח', 'דו"ח']:
-            # Optional: check if sender is admin
             if sender_phone == f"whatsapp:{os.getenv('ADMIN_WHATSAPP')}":
+
+                # Step 1 — Reply immediately
                 msg.body(
                     "📊 מייצר דוח מלאי מלא עם AI...\n"
                     "📊 Generating full AI inventory report...\n"
-                    "⏳ Please wait 10-15 seconds..."
+                    "⏳ תקבל/י את הדוח תוך 30 שניות!\n"
+                    "⏳ You will receive the report within 30 seconds!"
                 )
-                # Send acknowledgment first
-                response_ack = HttpResponse(
+                immediate_response = HttpResponse(
                     str(response), content_type='text/xml'
                 )
 
-                # Generate and send report
-                report = generate_inventory_report()
-                if report:
-                    twilio_client.messages.create(
-                        from_=TWILIO_NUMBER,
-                        to=sender_phone,
-                        body=f"📊 *דוח מלאי גמ\"ח תרופות*\n"
+                # Step 2 — Generate report in background thread
+                import threading
+
+                def send_report():
+                    report = generate_inventory_report()
+                    if report:
+                        # Split if too long for WhatsApp (max 1600 chars)
+                        header = (
+                            f"📊 *דוח מלאי גמ\"ח תרופות*\n"
                             f"*Gemach Inventory Report*\n"
                             f"{'─'*30}\n\n"
-                            f"{report}"
-                    )
-                else:
-                    twilio_client.messages.create(
-                        from_=TWILIO_NUMBER,
-                        to=sender_phone,
-                        body="❌ שגיאה בייצור הדוח. Error generating report."
-                    )
-                return response_ack
+                        )
+                        full_report = header + report
+
+                        # WhatsApp max message length = 1600 chars
+                        if len(full_report) <= 1600:
+                            twilio_client.messages.create(
+                                from_=TWILIO_NUMBER,
+                                to=sender_phone,
+                                body=full_report
+                            )
+                        else:
+                            # Split into two messages
+                            twilio_client.messages.create(
+                                from_=TWILIO_NUMBER,
+                                to=sender_phone,
+                                body=full_report[:1600]
+                            )
+                            twilio_client.messages.create(
+                                from_=TWILIO_NUMBER,
+                                to=sender_phone,
+                                body=full_report[1600:]
+                            )
+                    else:
+                        twilio_client.messages.create(
+                            from_=TWILIO_NUMBER,
+                            to=sender_phone,
+                            body="❌ שגיאה בייצור הדוח. Error generating report."
+                        )
+
+                # Start background thread
+                thread = threading.Thread(target=send_report)
+                thread.daemon = True
+                thread.start()
+
+                return immediate_response
+
             else:
                 msg.body(
                     "⛔ פקודה זו זמינה למנהל בלבד.\n"
                     "⛔ This command is for admin only."
                 )
                 return HttpResponse(str(response), content_type='text/xml')
-
+            
         # ── Natural language detection
         if is_natural_language(incoming_msg):
             all_medicines = list(Medicine.objects.all())
