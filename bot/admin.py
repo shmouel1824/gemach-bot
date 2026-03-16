@@ -14,8 +14,7 @@ class GemachAdminSite(admin.AdminSite):
 class MedicineAdmin(admin.ModelAdmin):
     list_display  = ['name', 'name_hebrew', 'quantity',
                      'expiry_date', 'min_age',
-                     'suitable_pregnant', 'is_available',
-                     'report_link']
+                     'suitable_pregnant', 'is_available']
     search_fields = ['name', 'name_hebrew']
     list_editable = ['quantity']
     list_filter   = ['suitable_pregnant']

@@ -5,7 +5,7 @@ from django.db.models import Count
 from datetime import timedelta
 from .models import Medicine, MissedRequest, Visitor, SearchLog
 from .views import generate_inventory_report
-
+import json
 
 @staff_member_required
 def inventory_report(request):
@@ -76,6 +76,7 @@ def inventory_report(request):
         'missed_30':           missed_30,
         'most_requested':      most_requested,
         'ai_report':           ai_report,
+        'ai_report_json': json.dumps(ai_report) if ai_report else None,
     }
 
     return render(request, 'admin/report.html', context)

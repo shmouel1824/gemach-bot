@@ -1,35 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>גמ"ח תרופות — Inventory Report</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
     <style>
         :root {
-            --bg: #0d1117;
-            --bg2: #161b22;
-            --bg3: #21262d;
-            --border: #30363d;
-            --gold: #d4a843;
-            --green: #3fb950;
-            --red: #f85149;
-            --yellow: #fbbf24;
-            --blue: #58a6ff;
-            --text: #e6edf3;
+            --bg:       #0d1117;
+            --bg2:      #161b22;
+            --bg3:      #21262d;
+            --border:   #30363d;
+            --gold:     #d4a843;
+            --green:    #3fb950;
+            --red:      #f85149;
+            --yellow:   #fbbf24;
+            --blue:     #58a6ff;
+            --text:     #e6edf3;
             --text-dim: #8b949e;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
             background: var(--bg);
             color: var(--text);
@@ -38,33 +29,34 @@
             line-height: 1.6;
             padding: 2rem;
         }
-
         .header {
             text-align: center;
             margin-bottom: 2rem;
             padding-bottom: 1.5rem;
             border-bottom: 1px solid var(--border);
         }
-
         .header h1 {
             font-family: 'Cinzel', serif;
             font-size: 2rem;
             color: var(--gold);
             margin-bottom: 0.3rem;
         }
-
-        .header p {
-            color: var(--text-dim);
-            font-style: italic;
+        .header p { color: var(--text-dim); font-style: italic; }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: var(--gold);
+            text-decoration: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
         }
-
+        .back-link:hover { text-decoration: underline; }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 1rem;
             margin-bottom: 2rem;
         }
-
         .stat-card {
             background: var(--bg2);
             border: 1px solid var(--border);
@@ -73,66 +65,30 @@
             text-align: center;
             transition: transform 0.2s;
         }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-        }
-
+        .stat-card:hover { transform: translateY(-3px); }
         .stat-number {
             font-family: 'Cinzel', serif;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 600;
             margin-bottom: 0.3rem;
         }
-
         .stat-label {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             color: var(--text-dim);
             letter-spacing: 0.1em;
             text-transform: uppercase;
         }
-
-        .stat-card.red {
-            border-color: var(--red);
-        }
-
-        .stat-card.red .stat-number {
-            color: var(--red);
-        }
-
-        .stat-card.yellow {
-            border-color: var(--yellow);
-        }
-
-        .stat-card.yellow .stat-number {
-            color: var(--yellow);
-        }
-
-        .stat-card.green {
-            border-color: var(--green);
-        }
-
-        .stat-card.green .stat-number {
-            color: var(--green);
-        }
-
-        .stat-card.blue {
-            border-color: var(--blue);
-        }
-
-        .stat-card.blue .stat-number {
-            color: var(--blue);
-        }
-
-        .stat-card.gold {
-            border-color: var(--gold);
-        }
-
-        .stat-card.gold .stat-number {
-            color: var(--gold);
-        }
-
+        .stat-card.red    { border-color: var(--red);    }
+        .stat-card.red    .stat-number { color: var(--red); }
+        .stat-card.yellow { border-color: var(--yellow); }
+        .stat-card.yellow .stat-number { color: var(--yellow); }
+        .stat-card.green  { border-color: var(--green);  }
+        .stat-card.green  .stat-number { color: var(--green); }
+        .stat-card.blue   { border-color: var(--blue);   }
+        .stat-card.blue   .stat-number { color: var(--blue); }
+        .stat-card.gold   { border-color: var(--gold);   }
+        .stat-card.gold   .stat-number { color: var(--gold); }
         .section {
             background: var(--bg2);
             border: 1px solid var(--border);
@@ -140,7 +96,6 @@
             padding: 1.5rem;
             margin-bottom: 1.5rem;
         }
-
         .section-title {
             font-family: 'Cinzel', serif;
             font-size: 1.1rem;
@@ -149,13 +104,11 @@
             padding-bottom: 0.5rem;
             border-bottom: 1px solid var(--border);
         }
-
         table {
             width: 100%;
             border-collapse: collapse;
             font-size: 0.9rem;
         }
-
         th {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.68rem;
@@ -166,18 +119,12 @@
             border-bottom: 2px solid var(--border);
             background: var(--bg3);
         }
-
         td {
             padding: 0.6rem 0.8rem;
             border-bottom: 1px solid var(--border);
             color: var(--text-dim);
         }
-
-        tr:hover td {
-            background: var(--bg3);
-            color: var(--text);
-        }
-
+        tr:hover td { background: var(--bg3); color: var(--text); }
         .badge {
             display: inline-block;
             padding: 0.15rem 0.6rem;
@@ -185,45 +132,22 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.7rem;
         }
-
-        .badge-red {
-            background: rgba(248, 81, 73, 0.15);
-            color: var(--red);
-            border: 1px solid rgba(248, 81, 73, 0.3);
-        }
-
-        .badge-yellow {
-            background: rgba(251, 191, 36, 0.15);
-            color: var(--yellow);
-            border: 1px solid rgba(251, 191, 36, 0.3);
-        }
-
-        .badge-green {
-            background: rgba(63, 185, 80, 0.15);
-            color: var(--green);
-            border: 1px solid rgba(63, 185, 80, 0.3);
-        }
-
-        .badge-blue {
-            background: rgba(88, 166, 255, 0.15);
-            color: var(--blue);
-            border: 1px solid rgba(88, 166, 255, 0.3);
-        }
-
+        .badge-red    { background: rgba(248,81,73,0.15);  color: var(--red);    border: 1px solid rgba(248,81,73,0.3); }
+        .badge-yellow { background: rgba(251,191,36,0.15); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+        .badge-green  { background: rgba(63,185,80,0.15);  color: var(--green);  border: 1px solid rgba(63,185,80,0.3); }
+        .badge-blue   { background: rgba(88,166,255,0.15); color: var(--blue);   border: 1px solid rgba(88,166,255,0.3); }
         .charts-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
             margin-bottom: 1.5rem;
         }
-
         .chart-box {
             background: var(--bg2);
             border: 1px solid var(--border);
             border-radius: 1rem;
             padding: 1.5rem;
         }
-
         .chart-title {
             font-family: 'Cinzel', serif;
             font-size: 1rem;
@@ -231,19 +155,6 @@
             margin-bottom: 1rem;
             text-align: center;
         }
-
-        .ai-report {
-            background: var(--bg3);
-            border: 1px solid rgba(212, 168, 67, 0.3);
-            border-radius: 0.6rem;
-            padding: 1.2rem;
-            font-size: 0.95rem;
-            color: var(--text);
-            white-space: pre-wrap;
-            line-height: 1.8;
-            font-family: 'Crimson Pro', serif;
-        }
-
         .generate-btn {
             display: inline-block;
             background: linear-gradient(135deg, #d4a843, #a07830);
@@ -256,39 +167,43 @@
             border: none;
             cursor: pointer;
             text-decoration: none;
-            transition: all 0.3s;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
         }
-
-        .generate-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(212, 168, 67, 0.3);
+        .generate-btn:hover { opacity: 0.9; }
+        .ai-report-content {
+            font-size: 0.95rem;
+            color: var(--text);
+            line-height: 1.8;
         }
-
-        .loading {
+        .ai-report-content h1,
+        .ai-report-content h2,
+        .ai-report-content h3 {
+            font-family: 'Cinzel', serif;
+            color: var(--gold);
+            margin: 1.2rem 0 0.6rem;
+        }
+        .ai-report-content h1 { font-size: 1.3rem; }
+        .ai-report-content h2 { font-size: 1.15rem; }
+        .ai-report-content h3 { font-size: 1rem; }
+        .ai-report-content strong { color: var(--text); }
+        .ai-report-content ul, .ai-report-content ol {
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+        .ai-report-content li {
             color: var(--text-dim);
-            font-style: italic;
-            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
         }
-
-        @media (max-width: 600px) {
-            .charts-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        .ai-report-content p {
+            margin-bottom: 0.8rem;
+            color: var(--text-dim);
         }
-
-        .ai-report table {
+        .ai-report-content table {
             width: 100%;
             border-collapse: collapse;
             margin: 1rem 0;
-            font-size: 0.9rem;
         }
-
-        .ai-report th {
+        .ai-report-content th {
             background: var(--bg3);
             color: var(--gold);
             padding: 0.6rem 1rem;
@@ -296,324 +211,258 @@
             border-bottom: 2px solid var(--border);
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.72rem;
-            letter-spacing: 0.1em;
         }
-
-        .ai-report td {
+        .ai-report-content td {
             padding: 0.6rem 1rem;
             border-bottom: 1px solid var(--border);
             color: var(--text-dim);
         }
-
-        .ai-report tr:hover td {
+        .ai-report-content tr:hover td {
             background: var(--bg3);
             color: var(--text);
         }
-
-        .ai-report h1,
-        .ai-report h2,
-        .ai-report h3 {
-            font-family: 'Cinzel', serif;
-            color: var(--gold);
-            margin: 1.2rem 0 0.6rem;
-        }
-
-        .ai-report h1 {
-            font-size: 1.3rem;
-        }
-
-        .ai-report h2 {
-            font-size: 1.15rem;
-        }
-
-        .ai-report h3 {
-            font-size: 1rem;
-        }
-
-        .ai-report strong {
-            color: var(--text);
-        }
-
-        .ai-report ul,
-        .ai-report ol {
-            padding-left: 1.5rem;
-            margin: 0.5rem 0;
-        }
-
-        .ai-report li {
-            color: var(--text-dim);
-            margin-bottom: 0.3rem;
-            line-height: 1.6;
-        }
-
-        .ai-report p {
-            margin-bottom: 0.8rem;
-            color: var(--text-dim);
-        }
-
-        .ai-report hr {
+        .ai-report-content hr {
             border: none;
             border-top: 1px solid var(--border);
             margin: 1rem 0;
         }
-
-        .ai-report code {
-            font-family: 'JetBrains Mono', monospace;
-            background: var(--bg3);
-            padding: 0.1rem 0.4rem;
-            border-radius: 3px;
-            font-size: 0.85em;
-            color: var(--blue);
+        .loading {
+            color: var(--text-dim);
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+        @media (max-width: 600px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .stats-grid  { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
-
 <body>
 
-    <div class="header">
-        <h1>📊 גמ"ח תרופות</h1>
-        <p>Inventory Intelligence Dashboard · {{ today }}</p>
-    </div>
+<a href="/admin/" class="back-link">← Back to Admin Panel</a>
 
-    <!-- STATS CARDS -->
-    <div class="stats-grid">
-        <div class="stat-card green">
-            <div class="stat-number">{{ total_medicines }}</div>
-            <div class="stat-label">Total Medicines</div>
-        </div>
-        <div class="stat-card green">
-            <div class="stat-number">{{ available_count }}</div>
-            <div class="stat-label">Available</div>
-        </div>
-        <div class="stat-card red">
-            <div class="stat-number">{{ out_of_stock_count }}</div>
-            <div class="stat-label">Out of Stock</div>
-        </div>
-        <div class="stat-card yellow">
-            <div class="stat-number">{{ low_stock_count }}</div>
-            <div class="stat-label">Low Stock</div>
-        </div>
-        <div class="stat-card red">
-            <div class="stat-number">{{ expired_count }}</div>
-            <div class="stat-label">Expired</div>
-        </div>
-        <div class="stat-card yellow">
-            <div class="stat-number">{{ expiring_soon_count }}</div>
-            <div class="stat-label">Expiring (90d)</div>
-        </div>
-        <div class="stat-card blue">
-            <div class="stat-number">{{ missed_7_count }}</div>
-            <div class="stat-label">Missed (7 days)</div>
-        </div>
-        <div class="stat-card gold">
-            <div class="stat-number">{{ total_visitors }}</div>
-            <div class="stat-label">Total Users</div>
-        </div>
-        <div class="stat-card blue">
-            <div class="stat-number">{{ total_searches }}</div>
-            <div class="stat-label">Searches (30d)</div>
-        </div>
-    </div>
+<div class="header">
+    <h1>📊 גמ"ח תרופות</h1>
+    <p>Inventory Intelligence Dashboard · {{ today }}</p>
+</div>
 
-    <!-- CHARTS -->
-    <div class="charts-grid">
-        <div class="chart-box">
-            <div class="chart-title">Stock Status</div>
-            <canvas id="stockChart"></canvas>
-        </div>
-        <div class="chart-box">
-            <div class="chart-title">Top Missed Medicines (30 days)</div>
-            <canvas id="missedChart"></canvas>
-        </div>
+<!-- STATS CARDS -->
+<div class="stats-grid">
+    <div class="stat-card green">
+        <div class="stat-number">{{ total_medicines }}</div>
+        <div class="stat-label">Total Medicines</div>
     </div>
+    <div class="stat-card green">
+        <div class="stat-number">{{ available_count }}</div>
+        <div class="stat-label">Available</div>
+    </div>
+    <div class="stat-card red">
+        <div class="stat-number">{{ out_of_stock_count }}</div>
+        <div class="stat-label">Out of Stock</div>
+    </div>
+    <div class="stat-card yellow">
+        <div class="stat-number">{{ low_stock_count }}</div>
+        <div class="stat-label">Low Stock</div>
+    </div>
+    <div class="stat-card red">
+        <div class="stat-number">{{ expired_count }}</div>
+        <div class="stat-label">Expired</div>
+    </div>
+    <div class="stat-card yellow">
+        <div class="stat-number">{{ expiring_soon_count }}</div>
+        <div class="stat-label">Expiring (90d)</div>
+    </div>
+    <div class="stat-card blue">
+        <div class="stat-number">{{ missed_7_count }}</div>
+        <div class="stat-label">Missed (7 days)</div>
+    </div>
+    <div class="stat-card blue">
+        <div class="stat-number">{{ total_searches }}</div>
+        <div class="stat-label">Searches (30d)</div>
+    </div>
+    <div class="stat-card gold">
+        <div class="stat-number">{{ total_visitors }}</div>
+        <div class="stat-label">Total Users</div>
+    </div>
+</div>
 
-    <!-- URGENT ALERTS -->
-    {% if out_of_stock %}
-    <div class="section">
-        <div class="section-title">🔴 Out of Stock</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Medicine</th>
-                    <th>Hebrew</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for med in out_of_stock %}
-                <tr>
-                    <td>{{ med.name }}</td>
-                    <td>{{ med.name_hebrew }}</td>
-                    <td><span class="badge badge-red">Out of Stock</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- CHARTS -->
+<div class="charts-grid">
+    <div class="chart-box">
+        <div class="chart-title">Stock Status</div>
+        <canvas id="stockChart"></canvas>
     </div>
-    {% endif %}
+    <div class="chart-box">
+        <div class="chart-title">Top Missed Medicines (30 days)</div>
+        <canvas id="missedChart"></canvas>
+    </div>
+</div>
 
-    <!-- LOW STOCK -->
-    {% if low_stock %}
-    <div class="section">
-        <div class="section-title">🟡 Low Stock (≤2 units)</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Medicine</th>
-                    <th>Hebrew</th>
-                    <th>Quantity</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for med in low_stock %}
-                <tr>
-                    <td>{{ med.name }}</td>
-                    <td>{{ med.name_hebrew }}</td>
-                    <td><span class="badge badge-yellow">{{ med.quantity }} units</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
+<!-- URGENT ALERTS -->
+{% if out_of_stock %}
+<div class="section">
+    <div class="section-title">🔴 Out of Stock</div>
+    <table>
+        <thead>
+            <tr><th>Medicine</th><th>Hebrew</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            {% for med in out_of_stock %}
+            <tr>
+                <td>{{ med.name }}</td>
+                <td>{{ med.name_hebrew }}</td>
+                <td><span class="badge badge-red">Out of Stock</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
 
-    <!-- EXPIRING SOON -->
-    {% if expiring_soon %}
-    <div class="section">
-        <div class="section-title">⏰ Expiring Within 90 Days</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Medicine</th>
-                    <th>Hebrew</th>
-                    <th>Expiry Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for med in expiring_soon %}
-                <tr>
-                    <td>{{ med.name }}</td>
-                    <td>{{ med.name_hebrew }}</td>
-                    <td>
-                        <span class="badge badge-yellow">
-                            {{ med.expiry_date|date:"d/m/Y" }}
-                        </span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
-    <!-- MOST REQUESTED MEDICINES -->
-    {% if most_requested %}
-    <div class="section">
-        <div class="section-title">
-            🏆 Most Requested Medicines (30 days)
-        </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Medicine</th>
-                    <th>Times Requested</th>
-                    <th>Popularity</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in most_requested %}
-                <tr>
-                    <td>{{ item.medicine_name }}</td>
-                    <td>{{ item.count }}</td>
-                    <td>
-                        {% if item.count >= 10 %}
+<!-- LOW STOCK -->
+{% if low_stock %}
+<div class="section">
+    <div class="section-title">🟡 Low Stock (≤2 units)</div>
+    <table>
+        <thead>
+            <tr><th>Medicine</th><th>Hebrew</th><th>Quantity</th></tr>
+        </thead>
+        <tbody>
+            {% for med in low_stock %}
+            <tr>
+                <td>{{ med.name }}</td>
+                <td>{{ med.name_hebrew }}</td>
+                <td><span class="badge badge-yellow">{{ med.quantity }} units</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- EXPIRING SOON -->
+{% if expiring_soon %}
+<div class="section">
+    <div class="section-title">⏰ Expiring Within 90 Days</div>
+    <table>
+        <thead>
+            <tr><th>Medicine</th><th>Hebrew</th><th>Expiry Date</th></tr>
+        </thead>
+        <tbody>
+            {% for med in expiring_soon %}
+            <tr>
+                <td>{{ med.name }}</td>
+                <td>{{ med.name_hebrew }}</td>
+                <td><span class="badge badge-yellow">{{ med.expiry_date|date:"d/m/Y" }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- MOST REQUESTED MEDICINES (successful searches) -->
+{% if most_requested %}
+<div class="section">
+    <div class="section-title">🏆 Most Requested Medicines (30 days)</div>
+    <table>
+        <thead>
+            <tr><th>Medicine</th><th>Times Requested</th><th>Popularity</th></tr>
+        </thead>
+        <tbody>
+            {% for item in most_requested %}
+            <tr>
+                <td>{{ item.medicine_name }}</td>
+                <td>{{ item.count }}</td>
+                <td>
+                    {% if item.count >= 10 %}
                         <span class="badge badge-green">Very Popular</span>
-                        {% elif item.count >= 5 %}
+                    {% elif item.count >= 5 %}
                         <span class="badge badge-blue">Popular</span>
-                        {% else %}
+                    {% else %}
                         <span class="badge badge-yellow">Regular</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
-    <!-- MISSED REQUESTS -->
-    {% if missed_30 %}
-    <div class="section">
-        <div class="section-title">📋 Most Requested Missing Medicines (30 days)</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Medicine Searched</th>
-                    <th>Times Requested</th>
-                    <th>Priority</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in missed_30 %}
-                <tr>
-                    <td>{{ item.medicine_searched }}</td>
-                    <td>{{ item.count }}</td>
-                    <td>
-                        {% if item.count >= 5 %}
-                        <span class="badge badge-red">Urgent</span>
-                        {% elif item.count >= 3 %}
-                        <span class="badge badge-yellow">Medium</span>
-                        {% else %}
-                        <span class="badge badge-blue">Low</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
 
-    <!-- AI REPORT -->
-    <div class="section">
-        <div class="section-title">🤖 AI Analysis & Recommendations</div>
-        <a href="?generate=1" class="generate-btn">
-            🤖 Generate AI Report
-        </a>
-        {% if ai_report %}
-        <div class="ai-report" id="aiReportContent" data-raw="{{ ai_report|escapejs }}">
-        </div>
-        {% else %}
+<!-- MISSED REQUESTS -->
+{% if missed_30 %}
+<div class="section">
+    <div class="section-title">📋 Most Requested MISSING Medicines (30 days)</div>
+    <table>
+        <thead>
+            <tr><th>Medicine Searched</th><th>Times Requested</th><th>Priority</th></tr>
+        </thead>
+        <tbody>
+            {% for item in missed_30 %}
+            <tr>
+                <td>{{ item.medicine_searched }}</td>
+                <td>{{ item.count }}</td>
+                <td>
+                    {% if item.count >= 5 %}
+                        <span class="badge badge-red">Urgent — Add to stock!</span>
+                    {% elif item.count >= 3 %}
+                        <span class="badge badge-yellow">Medium</span>
+                    {% else %}
+                        <span class="badge badge-blue">Low</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- AI REPORT -->
+<div class="section">
+    <div class="section-title">🤖 AI Analysis & Recommendations</div>
+    <a href="?generate=1" class="generate-btn">
+        🤖 Generate AI Report
+    </a>
+    {% if ai_report %}
+        <div class="ai-report-content" id="aiReportDiv"></div>
+        <script id="aiRawData" type="application/json">
+            {{ ai_report_json|safe }}
+        </script>
+    {% else %}
         <p class="loading">
             Click the button above to generate a full AI analysis
             with recommendations for your inventory.
         </p>
-        {% endif %}
-    </div>
+    {% endif %}
+</div>
 
-    <script>
-        // Stock Status Chart
-        const stockCtx = document.getElementById('stockChart').getContext('2d');
-        new Chart(stockCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Available', 'Low Stock', 'Out of Stock', 'Expired'],
-                datasets: [{
-                    data: [
-                        {{ available_count }},
-                {{ low_stock_count }},
+<script>
+    // Stock Chart
+    const stockCtx = document.getElementById('stockChart').getContext('2d');
+    new Chart(stockCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Available', 'Low Stock', 'Out of Stock', 'Expired'],
+            datasets: [{
+                data: [
+                    {{ available_count }},
+                    {{ low_stock_count }},
                     {{ out_of_stock_count }},
-            {{ expired_count }}
+                    {{ expired_count }}
                 ],
-            backgroundColor: [
-            'rgba(63,185,80,0.8)',
-            'rgba(251,191,36,0.8)',
-            'rgba(248,81,73,0.8)',
-            'rgba(139,148,158,0.8)'
-        ],
-            borderColor: '#161b22',
-            borderWidth: 2
+                backgroundColor: [
+                    'rgba(63,185,80,0.8)',
+                    'rgba(251,191,36,0.8)',
+                    'rgba(248,81,73,0.8)',
+                    'rgba(139,148,158,0.8)'
+                ],
+                borderColor: '#161b22',
+                borderWidth: 2
             }]
         },
-            options: {
+        options: {
             plugins: {
                 legend: {
                     labels: { color: '#e6edf3', font: { size: 12 } }
@@ -622,32 +471,26 @@
         }
     });
 
-        // Missed Medicines Chart
-        const missedCtx = document.getElementById('missedChart').getContext('2d');
-        new Chart(missedCtx, {
-            type: 'bar',
-            data: {
-                labels: [{% for item in missed_30 %}'{{ item.medicine_searched }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+    // Missed Chart
+    const missedCtx = document.getElementById('missedChart').getContext('2d');
+    new Chart(missedCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for item in missed_30 %}'{{ item.medicine_searched }}'{% if not forloop.last %},{% endif %}{% endfor %}],
             datasets: [{
                 label: 'Requests',
-                data: [{% for item in missed_30 %}{{ item.count }}{% if not forloop.last %}, {% endif %} {% endfor %}],
-        backgroundColor: 'rgba(212,168,67,0.7)',
-            borderColor: '#d4a843',
+                data: [{% for item in missed_30 %}{{ item.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                backgroundColor: 'rgba(212,168,67,0.7)',
+                borderColor: '#d4a843',
                 borderWidth: 1,
-                    borderRadius: 4
+                borderRadius: 4
             }]
         },
         options: {
-            plugins: {
-                legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
             scales: {
                 x: {
-                    ticks: {
-                        color: '#8b949e',
-                            font: { size: 10 },
-                        maxRotation: 45
-                    },
+                    ticks: { color: '#8b949e', font: { size: 10 }, maxRotation: 45 },
                     grid: { color: '#30363d' }
                 },
                 y: {
@@ -657,21 +500,16 @@
             }
         }
     });
-    </script>
-    <script>
-        // Render AI report markdown
-        const aiContent = document.getElementById('aiReportContent');
-        if (aiContent) {
-            const raw = aiContent.getAttribute('data-raw');
-            if (raw) {
-                marked.setOptions({
-                    breaks: true,
-                    gfm: true
-                });
-                aiContent.innerHTML = marked.parse(raw);
-            }
-        }
-    </script>
-</body>
 
+    // Render AI report — fix unicode issue by reading from JSON script tag
+    const aiDiv = document.getElementById('aiReportDiv');
+    const aiRaw = document.getElementById('aiRawData');
+    if (aiDiv && aiRaw) {
+        const text = JSON.parse(aiRaw.textContent);
+        marked.setOptions({ breaks: true, gfm: true });
+        aiDiv.innerHTML = marked.parse(text);
+    }
+</script>
+
+</body>
 </html>

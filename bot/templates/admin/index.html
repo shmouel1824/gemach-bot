@@ -1,32 +1,33 @@
 {% extends "admin/index.html" %}
 {% load i18n %}
 
-{% block sidebar %}
-{{ block.super }}
-<div id="report-banner" style="
-    margin: 1rem;
+{% block content_title %}
+<div style="
     background: linear-gradient(135deg, #1a472a, #2d6a4f);
     border-radius: 8px;
-    padding: 1rem 1.2rem;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 ">
-    <div style="color:#fff; font-weight:600; margin-bottom:0.4rem;">
-        📊 Inventory Dashboard
-    </div>
-    <div style="color:rgba(255,255,255,0.7); font-size:0.8rem; margin-bottom:0.8rem;">
-        Stock · Missed requests · AI analysis
+    <div>
+        <div style="color:#fff; font-size:1.1rem; font-weight:600;">
+            📊 Inventory Intelligence Dashboard
+        </div>
+        <div style="color:rgba(255,255,255,0.7); font-size:0.82rem; margin-top:0.2rem;">
+            גמ"ח תרופות · Stock · Missed requests · AI analysis
+        </div>
     </div>
     <a href="/admin/report/" style="
-        display: block;
         background: #d4a843;
         color: #0d1117;
-        padding: 0.5rem 1rem;
-        border-radius: 5px;
+        padding: 0.6rem 1.5rem;
+        border-radius: 6px;
         text-decoration: none;
         font-weight: 600;
-        font-size: 0.85rem;
-        text-align: center;
-    ">
-        View Full Report →
-    </a>
+        font-size: 0.9rem;
+    ">📊 View Full Report →</a>
 </div>
+<h1>{% trans 'Site administration' %}</h1>
 {% endblock %}
