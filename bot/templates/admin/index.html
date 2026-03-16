@@ -1,0 +1,35 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+<div style="
+    background: linear-gradient(135deg, #1a472a, #2d6a4f);
+    border-radius: 8px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+">
+    <div>
+        <div style="color:#fff; font-size:1.1rem; font-weight:600; margin-bottom:0.2rem;">
+            📊 Inventory Intelligence Dashboard
+        </div>
+        <div style="color:rgba(255,255,255,0.7); font-size:0.85rem;">
+            Stock levels · Missed requests · AI analysis
+        </div>
+    </div>
+    <a href="/admin/report/" style="
+        background: #d4a843;
+        color: #0d1117;
+        padding: 0.6rem 1.5rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    ">
+        View Report →
+    </a>
+</div>
+{{ block.super }}
+{% endblock %}

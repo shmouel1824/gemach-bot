@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
 from rapidfuzz import process, fuzz
-from .models import Medicine, Visitor, MissedRequest
+from .models import Medicine, Visitor, MissedRequest, SearchLog
 import os
 import anthropic
 import requests
@@ -214,6 +214,12 @@ def whatsapp_bot(request):
                 )
 
                 if medicine and not is_fuzzy:
+                    # ── Log successful search
+                    SearchLog.objects.create(
+                    medicine_name   = medicine.name,
+                    requester_phone = sender_phone,
+                    was_available   = medicine.quantity > 0
+            )
                     heb = f" ({medicine.name_hebrew})" if medicine.name_hebrew else ""
                     details = []
                     if medicine.expiry_date:

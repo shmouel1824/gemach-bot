@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from django.utils.html import format_html
-from .models import Medicine, Visitor, MissedRequest
+from .models import Medicine, Visitor, MissedRequest, SearchLog
 
 
 class GemachAdminSite(admin.AdminSite):
@@ -34,3 +34,10 @@ class MissedRequestAdmin(admin.ModelAdmin):
                      'suggestion_given', 'date']
     list_filter   = ['date']
     search_fields = ['medicine_searched', 'requester_phone']
+
+@admin.register(SearchLog)
+class SearchLogAdmin(admin.ModelAdmin):
+    list_display  = ['medicine_name', 'requester_phone', 
+                     'was_available', 'date']
+    list_filter   = ['was_available', 'date']
+    search_fields = ['medicine_name']

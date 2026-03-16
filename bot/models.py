@@ -45,3 +45,15 @@ class MissedRequest(models.Model):
 
     class Meta:
         ordering = ['-date']
+
+class SearchLog(models.Model):
+    medicine_name   = models.CharField(max_length=200)
+    requester_phone = models.CharField(max_length=50)
+    date            = models.DateTimeField(auto_now_add=True)
+    was_available   = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.medicine_name} — {self.date.strftime('%d/%m/%Y %H:%M')}"
+
+    class Meta:
+        ordering = ['-date']

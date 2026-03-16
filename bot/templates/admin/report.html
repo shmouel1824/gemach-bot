@@ -255,6 +255,10 @@
         <div class="stat-number">{{ total_visitors }}</div>
         <div class="stat-label">Total Users</div>
     </div>
+    <div class="stat-card blue">
+        <div class="stat-number">{{ total_searches }}</div>
+        <div class="stat-label">Searches (30d)</div>
+    </div>
 </div>
 
 <!-- CHARTS -->
@@ -347,7 +351,40 @@
     </table>
 </div>
 {% endif %}
-
+<!-- MOST REQUESTED MEDICINES -->
+{% if most_requested %}
+<div class="section">
+    <div class="section-title">
+        🏆 Most Requested Medicines (30 days)
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Medicine</th>
+                <th>Times Requested</th>
+                <th>Popularity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in most_requested %}
+            <tr>
+                <td>{{ item.medicine_name }}</td>
+                <td>{{ item.count }}</td>
+                <td>
+                    {% if item.count >= 10 %}
+                        <span class="badge badge-green">Very Popular</span>
+                    {% elif item.count >= 5 %}
+                        <span class="badge badge-blue">Popular</span>
+                    {% else %}
+                        <span class="badge badge-yellow">Regular</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
 <!-- MISSED REQUESTS -->
 {% if missed_30 %}
 <div class="section">
