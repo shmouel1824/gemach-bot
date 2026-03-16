@@ -5,6 +5,7 @@ from twilio.rest import Client
 from rapidfuzz import process, fuzz
 from .models import Medicine, Visitor, MissedRequest
 import os
+import anthropic
 
 SIMILARITY_THRESHOLD = 65
 
@@ -297,17 +298,30 @@ def whatsapp_bot(request):
             )
 
         else:
-            msg.body(
-                f"❌ לא נמצאה *{incoming_msg}* במאגר שלנו.\n"
-                f"❌ *{incoming_msg}* was not found in our Gemach.\n\n"
-                + get_medicine_list()
-            )
+            # ── Get AI suggestions
+            available_medicines = list(Medicine.objects.all())
+            ai_suggestions = get_ai_suggestions(incoming_msg, available_medicines)
+
+            if ai_suggestions:
+                msg.body(
+                    f"❌ לא נמצאה *{incoming_msg}* במאגר שלנו.\n"
+                    f"❌ *{incoming_msg}* was not found in our Gemach.\n\n"
+                    f"{ai_suggestions}\n\n"
+                    f"שלח/י שם תרופה לבדיקת זמינות.\n"
+                    f"Send a medicine name to check availability."
+                )
+            else:
+                msg.body(
+                    f"❌ לא נמצאה *{incoming_msg}* במאגר שלנו.\n"
+                    f"❌ *{incoming_msg}* was not found in our Gemach.\n\n"
+                    + get_medicine_list()
+                )
+
             notify_admin(
                 medicine_searched=incoming_msg,
                 requester_phone=sender_phone,
                 suggestion=None
             )
-
         return HttpResponse(str(response), content_type='text/xml')
 
 @csrf_exempt
@@ -376,3 +390,63 @@ def sms_bot(request):
             )
 
         return HttpResponse(str(response), content_type='text/xml')
+
+
+
+
+def get_ai_suggestions(medicine_name, available_medicines):
+    """
+    Ask Claude AI to suggest alternatives from our available medicines.
+    """
+    try:
+        client = anthropic.Anthropic(
+            api_key=os.getenv('ANTHROPIC_API_KEY')
+        )
+
+        # Build list of available medicines
+        medicines_list = "\n".join([
+            f"- {m.name}"
+            + (f" ({m.name_hebrew})" if m.name_hebrew else "")
+            + f" — {m.quantity} units"
+            for m in available_medicines
+            if m.quantity > 0 and not m.is_expired()
+        ])
+
+        message = client.messages.create(
+            model="claude-opus-4-5",
+            max_tokens=300,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""You are a helpful pharmacy assistant for a medicine charity (גמ"ח תרופות) in Israel.
+
+                The user is looking for: {medicine_name}
+                This medicine is NOT available in our inventory.
+
+                Our currently available medicines are:
+                {medicines_list}
+
+                Please suggest 2-3 alternatives from OUR LIST ONLY that could serve a similar purpose.
+                Be brief and practical.
+                Reply in both Hebrew and English.
+                Format exactly like this:
+                🤖 הצעות חלופיות | AI Suggestions:
+                - [medicine name] — [one line reason in Hebrew] | [one line reason in English]
+                - [medicine name] — [one line reason in Hebrew] | [one line reason in English]
+
+                If no relevant alternatives exist in our list, reply with exactly:
+                NO_ALTERNATIVES"""
+                                }
+                            ]
+                        )
+
+        result = message.content[0].text.strip()
+
+        if result == "NO_ALTERNATIVES":
+            return None
+
+        return result
+
+    except Exception as e:
+        print(f"Claude API error: {e}")
+        return None
