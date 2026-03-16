@@ -196,12 +196,6 @@ def whatsapp_bot(request):
         response = MessagingResponse()
         msg = response.message()
 
-        # ── First time user
-        visitor, is_new = Visitor.objects.get_or_create(phone=sender_phone)
-        if is_new:
-            msg.body(get_welcome_message())
-            return HttpResponse(str(response), content_type='text/xml')
-        
         # ── Check for image
         num_media = int(request.POST.get('NumMedia', 0))
         if num_media > 0:
@@ -212,11 +206,9 @@ def whatsapp_bot(request):
                 "📸 Got your image! Trying to identify the medicine..."
             )
 
-            # Identify medicine from image
             identified_name = identify_medicine_from_image(image_url)
 
             if identified_name:
-                # Search in database
                 medicine, matched_name, is_fuzzy, score = search_medicine(
                     identified_name
                 )
@@ -227,9 +219,15 @@ def whatsapp_bot(request):
                     if medicine.expiry_date:
                         from django.utils import timezone
                         if medicine.is_expired():
-                            details.append(f"⚠️ פג תוקף! EXPIRED: {medicine.expiry_date.strftime('%d/%m/%Y')}")
+                            details.append(
+                                f"⚠️ פג תוקף! EXPIRED: "
+                                f"{medicine.expiry_date.strftime('%d/%m/%Y')}"
+                            )
                         else:
-                            details.append(f"📅 תוקף עד | Expiry: {medicine.expiry_date.strftime('%d/%m/%Y')}")
+                            details.append(
+                                f"📅 תוקף עד | Expiry: "
+                                f"{medicine.expiry_date.strftime('%d/%m/%Y')}"
+                            )
                     if medicine.min_age:
                         details.append(f"👶 מגיל | Min age: {medicine.min_age}+")
                     if medicine.suitable_pregnant:
@@ -280,7 +278,6 @@ def whatsapp_bot(request):
                     )
 
                 else:
-                    # Not in DB — get AI suggestions
                     available_medicines = list(Medicine.objects.all())
                     ai_suggestions = get_ai_suggestions(
                         identified_name, available_medicines
@@ -306,7 +303,6 @@ def whatsapp_bot(request):
                     )
 
             else:
-                # Could not identify
                 response2 = MessagingResponse()
                 msg2 = response2.message()
                 msg2.body(
@@ -321,16 +317,21 @@ def whatsapp_bot(request):
                     str(response2), content_type='text/xml'
                 )
 
+        # ── First time user
+        visitor, is_new = Visitor.objects.get_or_create(phone=sender_phone)
+        if is_new:
+            msg.body(get_welcome_message())
+            return HttpResponse(str(response), content_type='text/xml')
+
         # ── LIST command
         if incoming_msg.upper() in ['LIST', 'רשימה']:
             msg.body(get_medicine_list())
             return HttpResponse(str(response), content_type='text/xml')
-        
+
         # ── REPORT command (admin only)
         if incoming_msg.upper() in ['REPORT', 'דוח', 'דו"ח']:
             if sender_phone == f"whatsapp:{os.getenv('ADMIN_WHATSAPP')}":
 
-                # Step 1 — Reply immediately
                 msg.body(
                     "📊 מייצר דוח מלאי מלא עם AI...\n"
                     "📊 Generating full AI inventory report...\n"
@@ -341,8 +342,8 @@ def whatsapp_bot(request):
                     str(response), content_type='text/xml'
                 )
 
-                # Step 2 — Generate report in background thread
                 import threading
+                import time
 
                 def send_report():
                     report = generate_inventory_report()
@@ -361,7 +362,7 @@ def whatsapp_bot(request):
                             for i in range(0, len(full_report), chunk_size)
                         ]
 
-                        # Send each chunk
+                        # Send each chunk with delay
                         for i, chunk in enumerate(chunks):
                             if len(chunks) > 1:
                                 chunk = f"({i+1}/{len(chunks)})\n{chunk}"
@@ -370,8 +371,6 @@ def whatsapp_bot(request):
                                 to=sender_phone,
                                 body=chunk
                             )
-                            # Small delay between messages
-                            import time
                             time.sleep(1)
                     else:
                         twilio_client.messages.create(
@@ -380,13 +379,19 @@ def whatsapp_bot(request):
                             body="❌ שגיאה בייצור הדוח. Error generating report."
                         )
 
+                thread = threading.Thread(target=send_report)
+                thread.daemon = True
+                thread.start()
+
+                return immediate_response
+
             else:
                 msg.body(
                     "⛔ פקודה זו זמינה למנהל בלבד.\n"
                     "⛔ This command is for admin only."
                 )
                 return HttpResponse(str(response), content_type='text/xml')
-            
+
         # ── Natural language detection
         if is_natural_language(incoming_msg):
             all_medicines = list(Medicine.objects.all())
@@ -410,9 +415,7 @@ def whatsapp_bot(request):
         if medicine and not is_fuzzy:
             heb = f" ({medicine.name_hebrew})" if medicine.name_hebrew else ""
 
-            # ── Build details string
             details = []
-
             if medicine.expiry_date:
                 from django.utils import timezone
                 if medicine.is_expired():
@@ -425,20 +428,12 @@ def whatsapp_bot(request):
                         f"📅 תוקף עד | Expiry: "
                         f"{medicine.expiry_date.strftime('%d/%m/%Y')}"
                     )
-
             if medicine.min_age:
-                details.append(
-                    f"👶 מגיל | Min age: {medicine.min_age}+"
-                )
-
+                details.append(f"👶 מגיל | Min age: {medicine.min_age}+")
             if medicine.suitable_pregnant:
-                details.append(
-                    f"🤰 מתאים להריון | Safe for pregnant: ✅"
-                )
+                details.append(f"🤰 מתאים להריון | Safe for pregnant: ✅")
             else:
-                details.append(
-                    f"🤰 מתאים להריון | Safe for pregnant: ❌"
-                )
+                details.append(f"🤰 מתאים להריון | Safe for pregnant: ❌")
 
             details_text = "\n".join(details)
 
@@ -494,12 +489,10 @@ def whatsapp_bot(request):
             )
 
         else:
-            # ── Get AI suggestions
             available_medicines = list(Medicine.objects.all())
             ai_suggestions = get_ai_suggestions(
                 incoming_msg, available_medicines
             )
-
             if ai_suggestions:
                 msg.body(
                     f"❌ לא נמצאה *{incoming_msg}* במאגר שלנו.\n"
@@ -514,7 +507,6 @@ def whatsapp_bot(request):
                     f"❌ *{incoming_msg}* was not found in our Gemach.\n\n"
                     + get_medicine_list()
                 )
-
             notify_admin(
                 medicine_searched=incoming_msg,
                 requester_phone=sender_phone,
