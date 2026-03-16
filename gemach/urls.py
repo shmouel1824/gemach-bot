@@ -17,8 +17,10 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from bot.views_admin import inventory_report
 
 urlpatterns = [
+    path('admin/report/', inventory_report, name='inventory_report'),
     path('admin/', admin.site.urls),
     path('bot/', include('bot.urls')),
 ]

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>גמ"ח תרופות — Inventory Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg:       #0d1117;
+            --bg2:      #161b22;
+            --bg3:      #21262d;
+            --border:   #30363d;
+            --gold:     #d4a843;
+            --green:    #3fb950;
+            --red:      #f85149;
+            --yellow:   #fbbf24;
+            --blue:     #58a6ff;
+            --text:     #e6edf3;
+            --text-dim: #8b949e;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Crimson Pro', serif;
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            color: var(--gold);
+            margin-bottom: 0.3rem;
+        }
+
+        .header p {
+            color: var(--text-dim);
+            font-style: italic;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 0.8rem;
+            padding: 1.2rem;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+
+        .stat-number {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .stat-card.red    { border-color: var(--red);    }
+        .stat-card.red    .stat-number { color: var(--red); }
+        .stat-card.yellow { border-color: var(--yellow); }
+        .stat-card.yellow .stat-number { color: var(--yellow); }
+        .stat-card.green  { border-color: var(--green);  }
+        .stat-card.green  .stat-number { color: var(--green); }
+        .stat-card.blue   { border-color: var(--blue);   }
+        .stat-card.blue   .stat-number { color: var(--blue); }
+        .stat-card.gold   { border-color: var(--gold);   }
+        .stat-card.gold   .stat-number { color: var(--gold); }
+
+        .section {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            letter-spacing: 0.1em;
+            color: var(--gold);
+            text-align: left;
+            padding: 0.6rem 0.8rem;
+            border-bottom: 2px solid var(--border);
+            background: var(--bg3);
+        }
+
+        td {
+            padding: 0.6rem 0.8rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dim);
+        }
+
+        tr:hover td { background: var(--bg3); color: var(--text); }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.6rem;
+            border-radius: 2rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+        }
+
+        .badge-red    { background: rgba(248,81,73,0.15);  color: var(--red);    border: 1px solid rgba(248,81,73,0.3); }
+        .badge-yellow { background: rgba(251,191,36,0.15); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+        .badge-green  { background: rgba(63,185,80,0.15);  color: var(--green);  border: 1px solid rgba(63,185,80,0.3); }
+        .badge-blue   { background: rgba(88,166,255,0.15); color: var(--blue);   border: 1px solid rgba(88,166,255,0.3); }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-box {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+
+        .chart-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .ai-report {
+            background: var(--bg3);
+            border: 1px solid rgba(212,168,67,0.3);
+            border-radius: 0.6rem;
+            padding: 1.2rem;
+            font-size: 0.95rem;
+            color: var(--text);
+            white-space: pre-wrap;
+            line-height: 1.8;
+            font-family: 'Crimson Pro', serif;
+        }
+
+        .generate-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #d4a843, #a07830);
+            color: #0d1117;
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.8rem 2rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+            margin-bottom: 1rem;
+        }
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(212,168,67,0.3);
+        }
+
+        .loading {
+            color: var(--text-dim);
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .stats-grid  { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📊 גמ"ח תרופות</h1>
+    <p>Inventory Intelligence Dashboard · {{ today }}</p>
+</div>
+
+<!-- STATS CARDS -->
+<div class="stats-grid">
+    <div class="stat-card green">
+        <div class="stat-number">{{ total_medicines }}</div>
+        <div class="stat-label">Total Medicines</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-number">{{ available_count }}</div>
+        <div class="stat-label">Available</div>
+    </div>
+    <div class="stat-card red">
+        <div class="stat-number">{{ out_of_stock_count }}</div>
+        <div class="stat-label">Out of Stock</div>
+    </div>
+    <div class="stat-card yellow">
+        <div class="stat-number">{{ low_stock_count }}</div>
+        <div class="stat-label">Low Stock</div>
+    </div>
+    <div class="stat-card red">
+        <div class="stat-number">{{ expired_count }}</div>
+        <div class="stat-label">Expired</div>
+    </div>
+    <div class="stat-card yellow">
+        <div class="stat-number">{{ expiring_soon_count }}</div>
+        <div class="stat-label">Expiring (90d)</div>
+    </div>
+    <div class="stat-card blue">
+        <div class="stat-number">{{ missed_7_count }}</div>
+        <div class="stat-label">Missed (7 days)</div>
+    </div>
+    <div class="stat-card gold">
+        <div class="stat-number">{{ total_visitors }}</div>
+        <div class="stat-label">Total Users</div>
+    </div>
+</div>
+
+<!-- CHARTS -->
+<div class="charts-grid">
+    <div class="chart-box">
+        <div class="chart-title">Stock Status</div>
+        <canvas id="stockChart"></canvas>
+    </div>
+    <div class="chart-box">
+        <div class="chart-title">Top Missed Medicines (30 days)</div>
+        <canvas id="missedChart"></canvas>
+    </div>
+</div>
+
+<!-- URGENT ALERTS -->
+{% if out_of_stock %}
+<div class="section">
+    <div class="section-title">🔴 Out of Stock</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Medicine</th>
+                <th>Hebrew</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for med in out_of_stock %}
+            <tr>
+                <td>{{ med.name }}</td>
+                <td>{{ med.name_hebrew }}</td>
+                <td><span class="badge badge-red">Out of Stock</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- LOW STOCK -->
+{% if low_stock %}
+<div class="section">
+    <div class="section-title">🟡 Low Stock (≤2 units)</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Medicine</th>
+                <th>Hebrew</th>
+                <th>Quantity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for med in low_stock %}
+            <tr>
+                <td>{{ med.name }}</td>
+                <td>{{ med.name_hebrew }}</td>
+                <td><span class="badge badge-yellow">{{ med.quantity }} units</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- EXPIRING SOON -->
+{% if expiring_soon %}
+<div class="section">
+    <div class="section-title">⏰ Expiring Within 90 Days</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Medicine</th>
+                <th>Hebrew</th>
+                <th>Expiry Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for med in expiring_soon %}
+            <tr>
+                <td>{{ med.name }}</td>
+                <td>{{ med.name_hebrew }}</td>
+                <td>
+                    <span class="badge badge-yellow">
+                        {{ med.expiry_date|date:"d/m/Y" }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- MISSED REQUESTS -->
+{% if missed_30 %}
+<div class="section">
+    <div class="section-title">📋 Most Requested Missing Medicines (30 days)</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Medicine Searched</th>
+                <th>Times Requested</th>
+                <th>Priority</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in missed_30 %}
+            <tr>
+                <td>{{ item.medicine_searched }}</td>
+                <td>{{ item.count }}</td>
+                <td>
+                    {% if item.count >= 5 %}
+                        <span class="badge badge-red">Urgent</span>
+                    {% elif item.count >= 3 %}
+                        <span class="badge badge-yellow">Medium</span>
+                    {% else %}
+                        <span class="badge badge-blue">Low</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- AI REPORT -->
+<div class="section">
+    <div class="section-title">🤖 AI Analysis & Recommendations</div>
+    <a href="?generate=1" class="generate-btn">
+        🤖 Generate AI Report
+    </a>
+    {% if ai_report %}
+        <div class="ai-report">{{ ai_report }}</div>
+    {% else %}
+        <p class="loading">
+            Click the button above to generate a full AI analysis
+            with recommendations for your inventory.
+        </p>
+    {% endif %}
+</div>
+
+<script>
+    // Stock Status Chart
+    const stockCtx = document.getElementById('stockChart').getContext('2d');
+    new Chart(stockCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Available', 'Low Stock', 'Out of Stock', 'Expired'],
+            datasets: [{
+                data: [
+                    {{ available_count }},
+                    {{ low_stock_count }},
+                    {{ out_of_stock_count }},
+                    {{ expired_count }}
+                ],
+                backgroundColor: [
+                    'rgba(63,185,80,0.8)',
+                    'rgba(251,191,36,0.8)',
+                    'rgba(248,81,73,0.8)',
+                    'rgba(139,148,158,0.8)'
+                ],
+                borderColor: '#161b22',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    labels: { color: '#e6edf3', font: { size: 12 } }
+                }
+            }
+        }
+    });
+
+    // Missed Medicines Chart
+    const missedCtx = document.getElementById('missedChart').getContext('2d');
+    new Chart(missedCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for item in missed_30 %}'{{ item.medicine_searched }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Requests',
+                data: [{% for item in missed_30 %}{{ item.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                backgroundColor: 'rgba(212,168,67,0.7)',
+                borderColor: '#d4a843',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#8b949e',
+                        font: { size: 10 },
+                        maxRotation: 45
+                    },
+                    grid: { color: '#30363d' }
+                },
+                y: {
+                    ticks: { color: '#8b949e' },
+                    grid: { color: '#30363d' }
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
