@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+     'jazzmin', 
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -156,3 +157,79 @@ STATIC_URL = '/static/'
 CSRF_TRUSTED_ORIGINS = [
     'https://web-production-5f723.up.railway.app'
 ]
+
+JAZZMIN_SETTINGS = {
+    # ── Branding
+    "site_title":        'גמ"ח תרופות',
+    "site_header":       'גמ"ח תרופות',
+    "site_brand":        '💊 גמ"ח תרופות',
+    "welcome_sign":      'ברוכים הבאים לגמ"ח תרופות | Welcome to Pharmacy Gemach',
+    "copyright":         'גמ"ח תרופות 2026',
+
+    # ── Links
+    "topmenu_links": [
+        {"name": "🏠 Home",      "url": "admin:index"},
+        {"name": "📊 Report",    "url": "/admin/report/"},
+        {"name": "💊 Medicines", "url": "admin:bot_medicine_changelist"},
+        {"name": "📋 Missed",    "url": "admin:bot_missedrequest_changelist"},
+        {"name": "🔍 Searches",  "url": "admin:bot_searchlog_changelist"},
+    ],
+
+    # ── Sidebar
+    "show_sidebar":            True,
+    "navigation_expanded":     True,
+    "hide_apps":               [],
+    "hide_models":             [],
+
+    "icons": {
+        "auth":                    "fas fa-users-cog",
+        "auth.user":               "fas fa-user",
+        "auth.Group":              "fas fa-users",
+        "bot.Medicine":            "fas fa-pills",
+        "bot.MissedRequest":       "fas fa-exclamation-triangle",
+        "bot.SearchLog":           "fas fa-search",
+        "bot.Visitor":             "fas fa-mobile-alt",
+    },
+
+    "default_icon_parents":    "fas fa-chevron-circle-right",
+    "default_icon_children":   "fas fa-circle",
+
+    # ── UI
+    "related_modal_active":    True,
+    "custom_css":              None,
+    "custom_js":               None,
+    "use_google_fonts_cdn":    True,
+    "show_ui_builder":         False,
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text":       False,
+    "footer_small_text":       False,
+    "body_small_text":         False,
+    "brand_small_text":        False,
+    "brand_colour":            "navbar-success",
+    "accent":                  "accent-teal",
+    "navbar":                  "navbar-dark",
+    "no_navbar_border":        True,
+    "navbar_fixed":            True,
+    "layout_boxed":            False,
+    "footer_fixed":            False,
+    "sidebar_fixed":           True,
+    "sidebar":                 "sidebar-dark-success",
+    "sidebar_nav_small_text":  False,
+    "sidebar_disable_expand":  False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style":  False,
+    "theme":                   "darkly",
+    "dark_mode_theme":         "darkly",
+    "button_classes": {
+        "primary":   "btn-primary",
+        "secondary": "btn-secondary",
+        "info":      "btn-info",
+        "warning":   "btn-warning",
+        "danger":    "btn-danger",
+        "success":   "btn-success",
+    }
+}
