@@ -6,6 +6,8 @@ from rapidfuzz import process, fuzz
 from .models import Medicine, Visitor, MissedRequest
 import os
 import anthropic
+import requests
+import base64
 
 SIMILARITY_THRESHOLD = 65
 
@@ -199,6 +201,125 @@ def whatsapp_bot(request):
         if is_new:
             msg.body(get_welcome_message())
             return HttpResponse(str(response), content_type='text/xml')
+        
+        # ── Check for image
+        num_media = int(request.POST.get('NumMedia', 0))
+        if num_media > 0:
+            image_url = request.POST.get('MediaUrl0', '')
+
+            msg.body(
+                "📸 קיבלתי את התמונה! מנסה לזהות את התרופה...\n"
+                "📸 Got your image! Trying to identify the medicine..."
+            )
+
+            # Identify medicine from image
+            identified_name = identify_medicine_from_image(image_url)
+
+            if identified_name:
+                # Search in database
+                medicine, matched_name, is_fuzzy, score = search_medicine(
+                    identified_name
+                )
+
+                if medicine and not is_fuzzy:
+                    heb = f" ({medicine.name_hebrew})" if medicine.name_hebrew else ""
+                    details = []
+                    if medicine.expiry_date:
+                        from django.utils import timezone
+                        if medicine.is_expired():
+                            details.append(f"⚠️ פג תוקף! EXPIRED: {medicine.expiry_date.strftime('%d/%m/%Y')}")
+                        else:
+                            details.append(f"📅 תוקף עד | Expiry: {medicine.expiry_date.strftime('%d/%m/%Y')}")
+                    if medicine.min_age:
+                        details.append(f"👶 מגיל | Min age: {medicine.min_age}+")
+                    if medicine.suitable_pregnant:
+                        details.append(f"🤰 מתאים להריון | Safe for pregnant: ✅")
+                    else:
+                        details.append(f"🤰 מתאים להריון | Safe for pregnant: ❌")
+                    details_text = "\n".join(details)
+
+                    if medicine.quantity > 0 and not medicine.is_expired():
+                        response2 = MessagingResponse()
+                        msg2 = response2.message()
+                        msg2.body(
+                            f"🔍 זיהיתי: *{identified_name}*\n\n"
+                            f"✅ *{medicine.name}{heb}* זמינה! | Available! 🙏\n\n"
+                            f"כמות | Quantity: *{medicine.quantity} units*\n\n"
+                            f"{details_text}\n\n"
+                            f"אנא צור/י קשר לתיאום איסוף.\n"
+                            f"Please contact us to arrange pickup."
+                        )
+                        return HttpResponse(
+                            str(response2), content_type='text/xml'
+                        )
+                    else:
+                        response2 = MessagingResponse()
+                        msg2 = response2.message()
+                        msg2.body(
+                            f"🔍 זיהיתי: *{identified_name}*\n\n"
+                            f"😔 התרופה אזלה מהמלאי.\n"
+                            f"Out of stock.\n\n"
+                            f"{details_text}"
+                        )
+                        return HttpResponse(
+                            str(response2), content_type='text/xml'
+                        )
+
+                elif medicine and is_fuzzy:
+                    heb = f" ({medicine.name_hebrew})" if medicine.name_hebrew else ""
+                    response2 = MessagingResponse()
+                    msg2 = response2.message()
+                    msg2.body(
+                        f"🔍 זיהיתי: *{identified_name}*\n\n"
+                        f"🤔 האם התכוונת ל: *{medicine.name}{heb}*?\n"
+                        f"Did you mean: *{medicine.name}{heb}*?\n\n"
+                        f"שלח/י את השם לאישור. Send the name to confirm."
+                    )
+                    return HttpResponse(
+                        str(response2), content_type='text/xml'
+                    )
+
+                else:
+                    # Not in DB — get AI suggestions
+                    available_medicines = list(Medicine.objects.all())
+                    ai_suggestions = get_ai_suggestions(
+                        identified_name, available_medicines
+                    )
+                    response2 = MessagingResponse()
+                    msg2 = response2.message()
+                    if ai_suggestions:
+                        msg2.body(
+                            f"🔍 זיהיתי: *{identified_name}*\n\n"
+                            f"❌ לא נמצא במאגר שלנו.\n"
+                            f"Not in our Gemach.\n\n"
+                            f"{ai_suggestions}"
+                        )
+                    else:
+                        msg2.body(
+                            f"🔍 זיהיתי: *{identified_name}*\n\n"
+                            f"❌ לא נמצא במאגר שלנו.\n"
+                            f"Not found in our Gemach.\n\n"
+                            + get_medicine_list()
+                        )
+                    return HttpResponse(
+                        str(response2), content_type='text/xml'
+                    )
+
+            else:
+                # Could not identify
+                response2 = MessagingResponse()
+                msg2 = response2.message()
+                msg2.body(
+                    "😔 לא הצלחתי לזהות תרופה בתמונה.\n"
+                    "Could not identify a medicine in this image.\n\n"
+                    "אנא שלח/י תמונה ברורה יותר של קופסת התרופה,\n"
+                    "או הקלד/י את שם התרופה ישירות.\n\n"
+                    "Please send a clearer photo of the medicine box,\n"
+                    "or type the medicine name directly."
+                )
+                return HttpResponse(
+                    str(response2), content_type='text/xml'
+                )
 
         # ── LIST command
         if incoming_msg.upper() in ['LIST', 'רשימה']:
@@ -555,3 +676,74 @@ def is_natural_language(text):
 
     text_lower = text.lower()
     return any(keyword in text_lower for keyword in natural_language_keywords)
+
+
+def identify_medicine_from_image(image_url):
+    """
+    Use Claude Vision API to identify a medicine from a photo.
+    Downloads image from Twilio and sends to Claude.
+    """
+    try:
+        # ── Download image from Twilio (requires auth)
+        twilio_auth = (
+            os.getenv('TWILIO_ACCOUNT_SID'),
+            os.getenv('TWILIO_AUTH_TOKEN')
+        )
+        image_response = requests.get(image_url, auth=twilio_auth)
+
+        if image_response.status_code != 200:
+            print(f"Failed to download image: {image_response.status_code}")
+            return None
+
+        # ── Convert to base64
+        image_data    = base64.standard_b64encode(
+            image_response.content
+        ).decode('utf-8')
+        content_type  = image_response.headers.get(
+            'Content-Type', 'image/jpeg'
+        )
+
+        # ── Send to Claude Vision
+        client = anthropic.Anthropic(
+            api_key=os.getenv('ANTHROPIC_API_KEY')
+        )
+
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=200,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type":       "base64",
+                                "media_type": content_type,
+                                "data":       image_data,
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": """This is a photo of a medicine box or packaging.
+Please identify the medicine name.
+Reply with ONLY the medicine name in English — nothing else.
+For example: Ventolin
+or: Acamol
+If you cannot identify a medicine, reply exactly: UNKNOWN"""
+                        }
+                    ]
+                }
+            ]
+        )
+
+        result = message.content[0].text.strip()
+
+        if result == "UNKNOWN":
+            return None
+
+        return result
+
+    except Exception as e:
+        print(f"Image identification error: {e}")
+        return None
