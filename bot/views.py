@@ -347,7 +347,6 @@ def whatsapp_bot(request):
                 def send_report():
                     report = generate_inventory_report()
                     if report:
-                        # Split if too long for WhatsApp (max 1600 chars)
                         header = (
                             f"📊 *דוח מלאי גמ\"ח תרופות*\n"
                             f"*Gemach Inventory Report*\n"
@@ -355,38 +354,31 @@ def whatsapp_bot(request):
                         )
                         full_report = header + report
 
-                        # WhatsApp max message length = 1600 chars
-                        if len(full_report) <= 1600:
+                        # Split into chunks of 1500 chars
+                        chunk_size = 1500
+                        chunks = [
+                            full_report[i:i+chunk_size]
+                            for i in range(0, len(full_report), chunk_size)
+                        ]
+
+                        # Send each chunk
+                        for i, chunk in enumerate(chunks):
+                            if len(chunks) > 1:
+                                chunk = f"({i+1}/{len(chunks)})\n{chunk}"
                             twilio_client.messages.create(
                                 from_=TWILIO_NUMBER,
                                 to=sender_phone,
-                                body=full_report
+                                body=chunk
                             )
-                        else:
-                            # Split into two messages
-                            twilio_client.messages.create(
-                                from_=TWILIO_NUMBER,
-                                to=sender_phone,
-                                body=full_report[:1600]
-                            )
-                            twilio_client.messages.create(
-                                from_=TWILIO_NUMBER,
-                                to=sender_phone,
-                                body=full_report[1600:]
-                            )
+                            # Small delay between messages
+                            import time
+                            time.sleep(1)
                     else:
                         twilio_client.messages.create(
                             from_=TWILIO_NUMBER,
                             to=sender_phone,
                             body="❌ שגיאה בייצור הדוח. Error generating report."
                         )
-
-                # Start background thread
-                thread = threading.Thread(target=send_report)
-                thread.daemon = True
-                thread.start()
-
-                return immediate_response
 
             else:
                 msg.body(
