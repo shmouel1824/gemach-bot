@@ -325,6 +325,45 @@ def whatsapp_bot(request):
         if incoming_msg.upper() in ['LIST', 'רשימה']:
             msg.body(get_medicine_list())
             return HttpResponse(str(response), content_type='text/xml')
+        
+        # ── REPORT command (admin only)
+        if incoming_msg.upper() in ['REPORT', 'דוח', 'דו"ח']:
+            # Optional: check if sender is admin
+            if sender_phone == f"whatsapp:{os.getenv('ADMIN_WHATSAPP')}":
+                msg.body(
+                    "📊 מייצר דוח מלאי מלא עם AI...\n"
+                    "📊 Generating full AI inventory report...\n"
+                    "⏳ Please wait 10-15 seconds..."
+                )
+                # Send acknowledgment first
+                response_ack = HttpResponse(
+                    str(response), content_type='text/xml'
+                )
+
+                # Generate and send report
+                report = generate_inventory_report()
+                if report:
+                    twilio_client.messages.create(
+                        from_=TWILIO_NUMBER,
+                        to=sender_phone,
+                        body=f"📊 *דוח מלאי גמ\"ח תרופות*\n"
+                            f"*Gemach Inventory Report*\n"
+                            f"{'─'*30}\n\n"
+                            f"{report}"
+                    )
+                else:
+                    twilio_client.messages.create(
+                        from_=TWILIO_NUMBER,
+                        to=sender_phone,
+                        body="❌ שגיאה בייצור הדוח. Error generating report."
+                    )
+                return response_ack
+            else:
+                msg.body(
+                    "⛔ פקודה זו זמינה למנהל בלבד.\n"
+                    "⛔ This command is for admin only."
+                )
+                return HttpResponse(str(response), content_type='text/xml')
 
         # ── Natural language detection
         if is_natural_language(incoming_msg):
@@ -746,4 +785,152 @@ If you cannot identify a medicine, reply exactly: UNKNOWN"""
 
     except Exception as e:
         print(f"Image identification error: {e}")
+        return None
+    
+def generate_inventory_report():
+    """
+    Generate a full AI-powered inventory analysis report.
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Count
+
+        # ── Gather all data
+        today = timezone.now().date()
+        thirty_days_ago = today - timedelta(days=30)
+        seven_days_ago  = today - timedelta(days=7)
+
+        # Most requested missing medicines (last 30 days)
+        missed_30 = (
+            MissedRequest.objects
+            .filter(date__date__gte=thirty_days_ago)
+            .values('medicine_searched')
+            .annotate(count=Count('medicine_searched'))
+            .order_by('-count')[:10]
+        )
+
+        # Most requested missing medicines (last 7 days)
+        missed_7 = (
+            MissedRequest.objects
+            .filter(date__date__gte=seven_days_ago)
+            .values('medicine_searched')
+            .annotate(count=Count('medicine_searched'))
+            .order_by('-count')[:5]
+        )
+
+        # Current stock
+        all_medicines     = Medicine.objects.all()
+        out_of_stock      = all_medicines.filter(quantity=0)
+        low_stock         = all_medicines.filter(quantity__lte=2, quantity__gt=0)
+        expiring_soon     = [
+            m for m in all_medicines
+            if m.expiry_date and
+            m.expiry_date <= today + timedelta(days=90) and
+            not m.is_expired()
+        ]
+        expired           = [m for m in all_medicines if m.is_expired()]
+        never_requested   = [
+            m for m in all_medicines
+            if not MissedRequest.objects.filter(
+                medicine_searched__iexact=m.name
+            ).exists()
+            and m.quantity > 5
+        ]
+
+        # ── Build data summary for Claude
+        missed_30_text = "\n".join([
+            f"- {item['medicine_searched']}: {item['count']} requests"
+            for item in missed_30
+        ]) or "None"
+
+        missed_7_text = "\n".join([
+            f"- {item['medicine_searched']}: {item['count']} requests"
+            for item in missed_7
+        ]) or "None"
+
+        out_of_stock_text = "\n".join([
+            f"- {m.name} ({m.name_hebrew})"
+            for m in out_of_stock
+        ]) or "None"
+
+        low_stock_text = "\n".join([
+            f"- {m.name} ({m.name_hebrew}): {m.quantity} units"
+            for m in low_stock
+        ]) or "None"
+
+        expiring_text = "\n".join([
+            f"- {m.name}: expires {m.expiry_date.strftime('%d/%m/%Y')}"
+            for m in expiring_soon
+        ]) or "None"
+
+        expired_text = "\n".join([
+            f"- {m.name}: expired {m.expiry_date.strftime('%d/%m/%Y')}"
+            for m in expired
+        ]) or "None"
+
+        never_requested_text = "\n".join([
+            f"- {m.name}: {m.quantity} units, never requested"
+            for m in never_requested[:5]
+        ]) or "None"
+
+        # ── Send to Claude AI
+        client = anthropic.Anthropic(
+            api_key=os.getenv('ANTHROPIC_API_KEY')
+        )
+
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=800,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""You are an intelligent inventory manager for a medicine charity (גמ"ח תרופות) in Israel.
+
+Analyze this data and provide a FULL report with actionable recommendations.
+Write in both Hebrew and English.
+Be specific, practical and helpful.
+Today's date: {today.strftime('%d/%m/%Y')}
+
+DATA:
+═══════════════════════════════
+Most requested MISSING medicines (last 7 days):
+{missed_7_text}
+
+Most requested MISSING medicines (last 30 days):
+{missed_30_text}
+
+Currently OUT OF STOCK:
+{out_of_stock_text}
+
+LOW STOCK (≤2 units):
+{low_stock_text}
+
+EXPIRING within 90 days:
+{expiring_text}
+
+ALREADY EXPIRED:
+{expired_text}
+
+OVERSTOCKED (never requested, >5 units):
+{never_requested_text}
+═══════════════════════════════
+
+Please provide:
+1. 🔴 URGENT actions needed
+2. 🟡 Important actions this week
+3. 🟢 Good news / what's working well
+4. 💡 AI insight and seasonal recommendations
+5. 📋 Summary in 2 lines
+
+Format with emojis, clear sections, bilingual (Hebrew | English).
+Keep it concise but complete — max 600 words."""
+                }
+            ]
+        )
+
+        return message.content[0].text.strip()
+
+    except Exception as e:
+        print(f"Report generation error: {e}")
         return None
