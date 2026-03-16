@@ -205,7 +205,24 @@ def whatsapp_bot(request):
             msg.body(get_medicine_list())
             return HttpResponse(str(response), content_type='text/xml')
 
-        # ── Search
+        # ── Natural language detection
+        if is_natural_language(incoming_msg):
+            all_medicines = list(Medicine.objects.all())
+            nl_result = get_natural_language_medicines(
+                incoming_msg, all_medicines
+            )
+            if nl_result:
+                msg.body(nl_result)
+                return HttpResponse(str(response), content_type='text/xml')
+            else:
+                msg.body(
+                    f"🤔 לא מצאתי תרופות מתאימות לבקשה שלך.\n"
+                    f"🤔 No matching medicines found for your request.\n\n"
+                    + get_medicine_list()
+                )
+                return HttpResponse(str(response), content_type='text/xml')
+
+        # ── Regular medicine search
         medicine, matched_name, is_fuzzy, score = search_medicine(incoming_msg)
 
         if medicine and not is_fuzzy:
@@ -214,7 +231,6 @@ def whatsapp_bot(request):
             # ── Build details string
             details = []
 
-            # Expiry date
             if medicine.expiry_date:
                 from django.utils import timezone
                 if medicine.is_expired():
@@ -228,13 +244,11 @@ def whatsapp_bot(request):
                         f"{medicine.expiry_date.strftime('%d/%m/%Y')}"
                     )
 
-            # Minimum age
             if medicine.min_age:
                 details.append(
                     f"👶 מגיל | Min age: {medicine.min_age}+"
                 )
 
-            # Suitable for pregnant
             if medicine.suitable_pregnant:
                 details.append(
                     f"🤰 מתאים להריון | Safe for pregnant: ✅"
@@ -300,7 +314,9 @@ def whatsapp_bot(request):
         else:
             # ── Get AI suggestions
             available_medicines = list(Medicine.objects.all())
-            ai_suggestions = get_ai_suggestions(incoming_msg, available_medicines)
+            ai_suggestions = get_ai_suggestions(
+                incoming_msg, available_medicines
+            )
 
             if ai_suggestions:
                 msg.body(
@@ -322,6 +338,7 @@ def whatsapp_bot(request):
                 requester_phone=sender_phone,
                 suggestion=None
             )
+
         return HttpResponse(str(response), content_type='text/xml')
 
 @csrf_exempt
@@ -450,3 +467,91 @@ def get_ai_suggestions(medicine_name, available_medicines):
     except Exception as e:
         print(f"Claude API error: {e}")
         return None
+    
+def get_natural_language_medicines(user_query, all_medicines):
+    """
+    Use Claude AI to understand natural language queries
+    and match them to medicines in our database.
+    """
+    try:
+        client = anthropic.Anthropic(
+            api_key=os.getenv('ANTHROPIC_API_KEY')
+        )
+
+        # Build full medicine list
+        medicines_list = "\n".join([
+            f"- {m.name}"
+            + (f" ({m.name_hebrew})" if m.name_hebrew else "")
+            + f" — quantity: {m.quantity}"
+            + (" — EXPIRED" if m.is_expired() else "")
+            for m in all_medicines
+        ])
+
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=400,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""You are a helpful pharmacy assistant for a medicine charity (גמ"ח תרופות) in Israel.
+
+The user wrote a natural language query (in Hebrew or English):
+"{user_query}"
+
+Our medicine inventory:
+{medicines_list}
+
+Task:
+1. Understand what condition or symptom the user is describing
+2. Find ALL relevant medicines from OUR LIST ONLY that could help
+3. Only suggest medicines with quantity > 0 and not expired
+
+Reply in both Hebrew and English using EXACTLY this format:
+🔍 הבנתי שאתה מחפש | I understood you need: [condition in Hebrew | condition in English]
+
+💊 תרופות זמינות | Available medicines:
+- [medicine name] ([name_hebrew]) — [brief reason Hebrew] | [brief reason English]
+- [medicine name] ([name_hebrew]) — [brief reason Hebrew] | [brief reason English]
+
+If no relevant medicines found, reply exactly:
+NO_MATCH"""
+                }
+            ]
+        )
+
+        result = message.content[0].text.strip()
+
+        if result == "NO_MATCH":
+            return None
+
+        return result
+
+    except Exception as e:
+        print(f"Claude NL error: {e}")
+        return None
+    
+
+def is_natural_language(text):
+    """
+    Detect if the user is writing a natural language query
+    rather than a specific medicine name.
+    """
+    natural_language_keywords = [
+        # Hebrew keywords
+        'משהו', 'תרופה', 'כאב', 'לכאב', 'כואב', 'חום',
+        'שיעול', 'נזלת', 'אלרגיה', 'עייפות', 'סחרחורת',
+        'בחילה', 'הקאה', 'שלשול', 'עצירות', 'צרבת',
+        'גירוד', 'פריחה', 'זיהום', 'דלקת', 'נפיחות',
+        'לחץ דם', 'סוכר', 'כולסטרול', 'מה יש', 'יש לכם',
+        'מחפש', 'מחפשת', 'צריך', 'צריכה', 'עוזר', 'עוזרת',
+        # English keywords
+        'something', 'medicine for', 'drug for', 'pain',
+        'headache', 'fever', 'cough', 'cold', 'allergy',
+        'nausea', 'diarrhea', 'constipation', 'infection',
+        'inflammation', 'rash', 'itch', 'looking for',
+        'do you have', 'what do you have', 'need something',
+        'for my', 'help with',
+    ]
+
+    text_lower = text.lower()
+    return any(keyword in text_lower for keyword in natural_language_keywords)
