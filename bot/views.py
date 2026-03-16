@@ -419,6 +419,12 @@ def whatsapp_bot(request):
         medicine, matched_name, is_fuzzy, score = search_medicine(incoming_msg)
 
         if medicine and not is_fuzzy:
+            # ── Log successful search
+            SearchLog.objects.create(
+                medicine_name   = medicine.name,
+                requester_phone = sender_phone,
+                was_available   = medicine.quantity > 0
+            )
             heb = f" ({medicine.name_hebrew})" if medicine.name_hebrew else ""
 
             details = []
